@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -15,6 +15,8 @@ export type Extracted = {
   markdown: string;
   wordCount: number;
   extractor: string;
+  extract_log?: Record<string, string>;
+  doi?: string;
 };
 
 export async function fromHtml(html: string, url: string): Promise<Extracted> {
@@ -33,13 +35,23 @@ export async function fromHtml(html: string, url: string): Promise<Extracted> {
   };
 }
 
+const PDF_ARGS = ['-enc', 'UTF-8'];
+let _ver = '';
+function pdftotextVersion() {
+  if (_ver) return _ver;
+  const r = spawnSync('pdftotext', ['-v'], { encoding: 'utf8' });
+  _ver = `${r.stdout || ''}${r.stderr || ''}`.match(/version\s+([\d.]+)/)?.[1] || '';
+  return (_ver ||= 'unknown');
+}
+
 export function fromPdf(buf: Buffer, fallbackTitle: string): Extracted {
   const tmp = path.join(os.tmpdir(), `ip-${process.pid}-${Date.now()}.pdf`);
   fs.writeFileSync(tmp, buf);
   let text = '';
   let title = fallbackTitle;
   try {
-    text = execFileSync('pdftotext', ['-layout', '-enc', 'UTF-8', tmp, '-'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    // -layout 은 두 단 조판을 한 줄에 나란히 붙여 읽기 순서를 섞는다 → 기본(읽기 순서) 모드
+    text = execFileSync('pdftotext', PDF_ARGS.concat([tmp, '-']), { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
     const info = execFileSync('pdfinfo', [tmp], { encoding: 'utf8' });
     const t = info.match(/^Title:[ \t]+(\S.*)$/m)?.[1]?.trim();
     if (t) title = t;
@@ -49,12 +61,17 @@ export function fromPdf(buf: Buffer, fallbackTitle: string): Extracted {
     const first = text.split('\n').map((l) => l.trim()).find((l) => l.length > 8 && l.length < 160 && !/arXiv|^\d+$|permission|copyright|licen[sc]e|attribution|proceedings|conference/i.test(l));
     if (first) title = first.slice(0, 120);
   }
-  const clean = text.replace(/\f/g, '\n\n---\n\n').replace(/[ \t]+\n/g, '\n').replace(/\n{4,}/g, '\n\n\n').trim();
+  let page = 1;
+  const paged = `<!-- p.1 -->\n\n${text.replace(/\f/g, () => `\n\n<!-- p.${++page} -->\n\n`)}`;
+  const doi = text.match(/\b(10\.\d{4,9}\/[^\s"<>]+[^\s"<>.,;)])/)?.[1];
+  const clean = paged.replace(/[ \t]+\n/g, '\n').replace(/\n{4,}/g, '\n\n\n').trim();
   return {
     title,
     markdown: clean,
     wordCount: clean.split(/\s+/).filter(Boolean).length,
     extractor: clean.length > 200 ? 'pdftotext' : 'pdftotext:empty(스캔 PDF 가능성)',
+    extract_log: { tool: 'pdftotext', version: pdftotextVersion(), args: PDF_ARGS.join(' '), at: new Date().toISOString(), pages: String(page) },
+    doi,
   };
 }
 

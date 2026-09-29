@@ -58,11 +58,12 @@ async function triage(item: Q.Item) {
 
 // ---------------- reduce ----------------
 type Reduced = {
+  title?: string;
   summary: string[];
   why_saved: string;
   quotes: { text: string; gloss?: string }[];
   tags: string[];
-  claims: { title: string; body: string }[];
+  claims: { title: string; body: string; verify_numbers?: boolean }[];
 };
 
 function reducePrompt(item: Q.Item, raw: { data: any; body: string }, deep: boolean) {
@@ -87,13 +88,17 @@ ${glossary || '(없음)'}
 원문:
 ${raw.body}
 
-출력 스키마: {"summary": [string], "why_saved": string, "quotes": [{"text": string, "gloss": string}], "tags": [string], "claims": [{"title": string, "body": string}]}`;
+${/^pdftotext/.test(raw.data.extractor || '') ? `- title: PDF에서 추출한 제목이 부정확할 수 있습니다. 원문에서 실제 문서 제목을 찾아 원어 그대로 넣으세요.
+- PDF 추출은 표 경계·수식·위첨자를 잃을 수 있습니다. 원문의 <!-- p.N --> 표시로 쪽을 알 수 있습니다. claims.body에서 근거를 말할 때 (p.N)으로 쪽을 적으세요.
+- 결론을 좌우하는 수치·부호의 방향·표의 비교군이 들어간 claim은 verify_numbers를 true로 두세요.
+` : ''}
+출력 스키마: {"title": string(선택), "summary": [string], "why_saved": string, "quotes": [{"text": string, "gloss": string}], "tags": [string], "claims": [{"title": string, "body": string, "verify_numbers": boolean}]}`;
 }
 
 function validateReduced(deep: boolean) {
   return (v: any): Reduced => {
     if (!Array.isArray(v.summary) || !v.summary.length) throw new Error('summary 누락');
-    if (!Array.isArray(v.claims)) v.claims = [];
+    if (!Array.isArray(v.claims) || !deep) v.claims = [];
     if (deep && !v.claims.length) throw new Error('claims 누락');
     v.claims = v.claims.filter((c: any) => c?.title && c?.body).slice(0, 5);
     v.quotes = (Array.isArray(v.quotes) ? v.quotes : []).filter((q: any) => q?.text).slice(0, 5);
@@ -111,6 +116,8 @@ function uniqueNotePath(title: string) {
 }
 
 function writeReduced(item: Q.Item, raw: { data: any }, r: Reduced, provider: string): string[] {
+  const isPdf = /^pdftotext/.test(raw.data.extractor || '');
+  const title = isPdf && r.title ? String(r.title).trim().slice(0, 200) : String(raw.data.title);
   const claimNames: string[] = [];
   const written: string[] = [];
   for (const c of r.claims) {
@@ -121,14 +128,14 @@ function writeReduced(item: Q.Item, raw: { data: any }, r: Reduced, provider: st
     writeFile(
       file,
       stringifyDoc(
-        { type: 'claim', title: c.title, sources: [item.id], tags: r.tags, created: now(), processed_by: provider, reflected: false },
-        `# ${c.title}\n\n${c.body.trim()}\n\n---\n출처: [[${item.id}|${String(raw.data.title).slice(0, 60)}]]`,
+        { type: 'claim', title: c.title, sources: [item.id], tags: r.tags, created: now(), processed_by: provider, reflected: false, verify: isPdf && c.verify_numbers ? '수치 원문 대조 필요' : undefined },
+        `# ${c.title}\n\n${isPdf && c.verify_numbers ? '> ⚠️ 수치·표 값은 PDF 추출본 기준입니다. 인용 전 원본 PDF와 대조하세요.\n\n' : ''}${c.body.trim()}\n\n---\n출처: [[${item.id}|${title.slice(0, 60)}]]`,
       ),
     );
   }
   const quotes = r.quotes.map((q) => `> ${q.text.replace(/\n/g, '\n> ')}${q.gloss ? `\n\n— ${q.gloss}` : ''}`).join('\n\n');
   const body = [
-    `# ${raw.data.title}`,
+    `# ${title}`,
     `## 요약\n${r.summary.map((s) => `- ${s}`).join('\n')}`,
     `## 왜 저장했나\n${item.memo ? `${item.memo} (사용자 메모)` : `${r.why_saved} (추정)`}`,
     quotes && `## 핵심 인용\n${quotes}`,
@@ -143,7 +150,7 @@ function writeReduced(item: Q.Item, raw: { data: any }, r: Reduced, provider: st
       {
         type: 'source',
         id: item.id,
-        title: raw.data.title,
+        title,
         source: raw.data.source,
         platform: raw.data.platform,
         author: raw.data.author,

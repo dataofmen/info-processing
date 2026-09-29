@@ -75,6 +75,8 @@ export async function captureOne(item: Q.Item): Promise<boolean> {
       language: x.language,
       word_count: x.wordCount,
       extractor: x.extractor,
+      extract_log: x.extract_log,
+      doi: x.doi,
       quality,
       images: images.length ? images : undefined,
       pdf: x.pdf,

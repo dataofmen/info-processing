@@ -19,7 +19,7 @@
 | D4 | 진입점 = 텔레그램 봇(URL·파일·`!`·메모). 무료 | 설치·동기화 불필요 |
 | D5 | 추출 = Playwright(자동화 전용 Chrome 프로필, 본인 계정 로그인) + Defuddle | 로그인 필요한 글도 원문 그대로 |
 | D6 | 3층 구조: `raw/`(불변) → `notes/`(출처·원자 노트) → `topics/`(MOC, 자동 갱신) | 증류 + 연결 |
-| D7 | 증류 방법론 = arscontexta(reduce/reflect/reweave/verify). hook은 스크립트로 대체 | 검증된 방법론, 모델 독립 검증 |
+| D7 | 증류 방법론 = arscontexta의 6R(reduce/reflect/reweave/verify). **플러그인 자체는 실행하지 않고 방법론을 코드로 구현**(2026-09-29 정정). LLM은 JSON만 반환, 파일 쓰기·검증은 코드 | 플러그인은 대화형 세션 전제라 무인 실행·다중 프로바이더와 맞지 않음. 모델이 파일을 직접 못 건드리게 해 안정성 확보 |
 | D8 | 단계별 실행 주체 분리(아래 표). 한도 오류는 실패가 아니라 대기 | 사용량 제한 회피 |
 | D9 | 3등급 분류: 깊게(~20%)/가볍게(~50%)/보관만(~30%). `!`는 강제 깊게 | 하루 30~40건 규모 |
 | D10 | 관심사 프로필은 클립 200건 시점에 AI가 제안 | 처음엔 일반 기준 |
@@ -59,12 +59,11 @@ raw/YYYY/MM/<id>.md  원문(불변)
 notes/sources/<id>.md   출처 노트(요약·인용·등급)
 notes/<slug>.md      원자 노트(주장 한 문장 제목, 출처 링크 필수)
 topics/<slug>.md     MOC(주제 지도)
-ops/queue/*.json     대기열 상태
 ops/image-map.json   이미지 대응표
 ```
 
 ## 안정성 규칙
-- 대기열 상태 `queued → captured → triaged → reduced → reflected` / `failed` / `waiting`(한도). 멱등·재시작 가능.
+- 대기열은 맥미니 로컬 `data/queue/*.json`(knowledge 저장소 밖, 2026-09-29 정정). 상태 `queued → captured → triaged → reduced → reflected` / `failed` / `waiting`(한도). 멱등·재시작 가능.
 - 파이프라인 전역 잠금 1개. 단계마다 verify 통과 후에만 commit, 실패 시 되돌림.
 - `raw/`는 쓰기 금지(검증기가 수정 감지 시 차단).
 - 일일 상태 알림(아무 일 없어도), 주간 주제 변경 요약.
@@ -91,4 +90,32 @@ ops/image-map.json   이미지 대응표
 3. GitHub `knowledge`, `assets-2026` 비공개 저장소 생성 승인.
 4. Imgur OAuth 1회 승인.
 5. Tailscale 로그인(맥미니·아이폰·노트북).
-6. arscontexta setup 대화(약 20분, 선택).
+6. (선택) arscontexta setup으로 `self/` 관심사·방법론 초안 받기 — 파이프라인 동작에는 필요 없음.
+
+## 2026-09-29 구현 현황
+| 항목 | 상태 |
+|---|---|
+| 전 단계 코드(캡처·분류·reduce·reflect/reweave·verify·색인·MCP·웹 UI·봇·일정) | 작성, 노트북에서 end-to-end 1회 통과 |
+| PoC ② agy 헤드리스 | ✅ (`agy -p`, 분류·reduce 실제 수행) |
+| PoC ③ FTS5 trigram 한국어 | ✅ |
+| 대체 순서(Gemini 인증 없음 → agy) | ✅ |
+| DB 삭제 → 재색인 복원 | ✅ |
+| MCP stdio·HTTP 도구 9개 | ✅ |
+| PoC ① 플랫폼 충실도(로그인 상태 X·LinkedIn·Threads) | ❌ 미검증 — 맥미니에서. Threads 테스트 URL이 다른 계정 글로 저장된 사례 있음 → 실제 글로 첫 검증 |
+| PoC ④ 로컬 임베딩 / ⑤ 로컬 분류 일치율 | ❌ 미검증(이 노트북에 Ollama 없음) |
+| PoC ⑥ Imgur OAuth | ❌ 미검증(refresh token 필요) |
+| Codex CLI | ❌ 미설치 기기에서 테스트 |
+| assets-YYYY 연 1GB 자동 분할 | 미구현(2차) |
+
+## PDF 원칙 (참고: LLM Wiki for Scientists 1부 4장, 2026-09-29 반영)
+| 원칙 | 구현 |
+|---|---|
+| 정본 PDF는 복사 후 고치지 않는다 | `assets/…/source.pdf` 불변, `raw/` 불변 ✅ |
+| 추출기는 두 단 순서를 섞고 표·수식·위첨자를 잃는다 | `pdftotext` 읽기 순서 모드(-layout 제거) ✅, 쪽 표시 `<!-- p.N -->` ✅ |
+| 어떤 도구로 언제 어떤 인자로 추출했는지 기록 | raw frontmatter `extract_log`(tool·version·args·at·pages) ✅ |
+| 결론을 좌우하는 수치·부호·표 비교군은 원문과 대조 | 해당 원자 노트에 `verify: 수치 원문 대조 필요` + 경고 줄, 본문에 (p.N) ✅ |
+| DOI | 본문에서 추출해 frontmatter `doi` ✅ |
+| 저자-연도-제목 토큰 stem | 2차: 출처 노트에 `stem` 필드(LLM 제안 → 검증) |
+| 프리프린트 vs 출판본 정본 판단, 교체 시 stem 유지 | 2차: DOI로 출판본 조회, 교체는 새 raw + 출처 노트 링크 교체 |
+| 보충 자료는 저자가 직접 쓴 문장이 있는 것만 | 2차: 봇에 여러 파일을 보낼 때 규칙 적용 |
+| 스캔 PDF | `pdftotext:empty` 표시 → 2차: Gemini로 변환 |
