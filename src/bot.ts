@@ -20,7 +20,8 @@ export function startBot(onEnqueue: () => void) {
     return null;
   }
   const bot = new Bot(config.telegramToken);
-  const allowed = (id?: number) => !config.telegramAllowed.length || config.telegramAllowed.includes(String(id));
+  // 허용 목록이 비어 있으면 아무도 허용하지 않는다(대신 chat ID를 알려 준다)
+  const allowed = (id?: number) => config.telegramAllowed.includes(String(id));
 
   bot.use(async (ctx, next) => {
     if (!allowed(ctx.chat?.id)) {
