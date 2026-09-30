@@ -24,6 +24,7 @@ pipeline (이 저장소, 코드)          data/ (맥미니 로컬, git 제외)
 | `npm run cli -- retry [--waiting]` | 실패(와 보류) 항목 재시도 |
 | `npm run login` | 자동화 브라우저에서 X·LinkedIn·Threads 로그인 |
 | `npm run mcp` | MCP stdio 모드 (같은 기기의 에이전트용) |
+| `npm run imgur:auth [-- --check \| --test-upload]` | Imgur refresh token 발급·확인 |
 
 ## 일정 (맥미니 로컬 시각)
 | 시각 | 작업 | 실행 주체 |
@@ -58,6 +59,16 @@ vi .env                        # 텔레그램 토큰, HOST=Tailscale IP, MCP_TOK
 ./scripts/connect-github.sh    # (선택) knowledge·assets 비공개 저장소 생성·연결
 ```
 비밀값(텔레그램 토큰, Imgur, MCP 토큰)은 `.env`에만 둔다. `.env`는 git에 올라가지 않는다.
+
+## Imgur 연결 (선택)
+이미지를 문서 안에서 Imgur URL로 보여 주려면 계정 연결 토큰이 필요하다. 없으면 이미지는 맥미니에 저장되고 웹 UI에서만 보인다.
+1. https://imgur.com/account/settings/apps 에서 앱의 **Authorization callback URL**을 `http://localhost:8765/imgur/callback` 으로 바꾼다.
+2. 같은 화면의 Client ID와 Client Secret(없으면 "generate new secret")을 `.env`의 `IMGUR_CLIENT_ID`, `IMGUR_CLIENT_SECRET`에 **직접** 넣는다.
+3. 맥미니에서 `npm run imgur:auth` 를 실행한다. 브라우저가 열리면 Allow를 누른다. refresh token은 `.env`에 바로 저장되고 화면에는 출력되지 않는다.
+4. `npm run imgur:auth -- --test-upload` 로 확인한다. 작은 테스트 이미지를 올렸다가 바로 지운다.
+5. 서비스를 재시작한다: `launchctl kickstart -k gui/$(id -u)/com.hm.info-pipeline`
+
+`npm run imgur:auth -- --check` 는 저장된 토큰이 아직 유효한지만 확인한다. 브라우저 콜백이 localhost라서 **스크립트와 브라우저가 같은 기기**에 있어야 한다(맥미니 화면 또는 화면 공유로 실행).
 
 ## 설계 원칙 (요약)
 - 정본은 Markdown. DB·UI는 파생물이라 지워도 복원된다.
