@@ -20,8 +20,8 @@ import sharp from 'sharp';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const args = process.argv.slice(2);
 const ENV_PATH = path.resolve(ROOT, args.includes('--env') ? args[args.indexOf('--env') + 1] : '.env');
-const PORT = 8765;
-const CALLBACK = `http://localhost:${PORT}/imgur/callback`;
+const PORT = Number(process.env.IMGUR_AUTH_PORT || 8765);
+const CALLBACK = process.env.IMGUR_REDIRECT_URI || `http://localhost:${PORT}/imgur/callback`;
 
 function readEnv(): Record<string, string> {
   if (!fs.existsSync(ENV_PATH)) throw new Error(`${ENV_PATH} 없음. .env.example 을 복사해 만드세요.`);
@@ -92,7 +92,7 @@ if (location.hash.includes('refresh_token')) {
 
 async function authorize(env: Record<string, string>) {
   const state = crypto.randomBytes(12).toString('hex');
-  const url = `https://api.imgur.com/oauth2/authorize?client_id=${encodeURIComponent(env.IMGUR_CLIENT_ID)}&response_type=code&state=${state}`;
+  const url = `https://api.imgur.com/oauth2/authorize?client_id=${encodeURIComponent(env.IMGUR_CLIENT_ID)}&response_type=token&state=${state}&redirect_uri=${encodeURIComponent(CALLBACK)}`;
 
   const tokens = await new Promise<Tokens>((resolve, reject) => {
     const timer = setTimeout(() => (server.close(), reject(new Error('5분 안에 승인하지 않아 종료했습니다.'))), 5 * 60 * 1000);
