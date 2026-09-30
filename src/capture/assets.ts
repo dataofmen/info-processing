@@ -25,19 +25,20 @@ async function imgurAccessToken(): Promise<string | null> {
   return imgurToken.token;
 }
 
-async function uploadImgur(buf: Buffer, title: string): Promise<{ link: string; deletehash: string } | null> {
+async function uploadImgur(buf: Buffer, title: string, filename = 'image.webp'): Promise<{ link: string; deletehash: string } | null> {
   const token = await imgurAccessToken().catch((e) => {
     log(e.message);
     return null;
   });
   if (!token) return null;
   const form = new FormData();
-  form.append('image', new Blob([buf]), 'image');
+  form.append('image', new Blob([buf]), filename);
   form.append('type', 'file');
   form.append('title', title.slice(0, 120));
   const r = await fetch('https://api.imgur.com/3/image', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
   if (!r.ok) {
-    log(`Imgur 업로드 실패 ${r.status}`);
+    const detail = await r.text().catch(() => '');
+    log(`Imgur 업로드 실패 ${r.status}${detail ? `: ${detail.slice(0, 240)}` : ''}`);
     return null;
   }
   const j: any = await r.json();
@@ -66,7 +67,9 @@ export async function storeImages(id: string, markdown: string, title: string): 
       const out = gif ? buf : await sharp(buf).rotate().resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true }).webp({ quality: 82 }).toBuffer();
       fs.writeFileSync(path.join(dir, name), out);
       const local = `${rel}/${name}`;
-      const up = await uploadImgur(out, title);
+      const uploadBuf = gif ? out : await sharp(out).png().toBuffer();
+      const uploadName = gif ? name : name.replace(/\.webp$/i, '.png');
+      const up = await uploadImgur(uploadBuf, title, uploadName);
       map[local] = { original: u, imgur: up?.link, deletehash: up?.deletehash };
       replace.set(u, up?.link || `/assets/${local}`);
       images.push(local);
