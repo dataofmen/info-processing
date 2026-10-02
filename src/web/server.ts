@@ -7,6 +7,7 @@ import { config } from '../config.ts';
 import * as Q from '../queue.ts';
 import * as S from '../query.ts';
 import { log } from '../util.ts';
+import { opsMetrics } from '../ops.ts';
 import { CSS, GRAPH_JS } from './assets.ts';
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -198,6 +199,7 @@ app.get('/ops', (c) => {
   const items = Q.all().reverse();
   const groups = ['failed', 'waiting', 'queued', 'captured', 'triaged', 'reduced'];
   const counts = Q.counts();
+  const m = opsMetrics(3);
   const sec = groups
     .map((g) => {
       const rows = items.filter((i) => i.status === g).slice(0, 50);
@@ -210,9 +212,23 @@ app.get('/ops', (c) => {
     })
     .join('');
   const st = S.stats();
+  const platformRows = Object.entries(m.platform).map(([p,v]) => `<tr><td>${esc(p)}</td><td>${v.total}</td><td>${v.captured}</td><td>${v.failed}</td><td>${v.waiting}</td></tr>`).join('');
+  const providerRows = Object.entries(m.providers).sort((a,b)=>b[1]-a[1]).map(([p,n]) => `${esc(p)} ${n}`).join(' · ') || '-';
+  const suggestions = m.suggestions.map((x) => `<li>${esc(x)}</li>`).join('');
   const body = `<h1 class="h">운영</h1>
+<h2>최근 3일 운영 품질</h2>
+<section class="stats">
+  <div><b>${m.capture_rate}%</b><span>수집 성공률</span></div>
+  <div><b>${m.partial_rate}%</b><span>부분 저장률</span></div>
+  <div><b>${m.claims}</b><span>생성 원자 노트</span></div>
+  <div><b>${m.failed + m.waiting}</b><span>실패·로그인 보류</span></div>
+  <div><b>${m.verify_problems.length}</b><span>검증 문제</span></div>
+</section>
+<div class="cols"><section><h2>플랫폼별</h2><div class="tablewrap"><table class="ops-table"><thead><tr><th>플랫폼</th><th>입력</th><th>수집</th><th>실패</th><th>보류</th></tr></thead><tbody>${platformRows || '<tr><td colspan="5">데이터 없음</td></tr>'}</tbody></table></div></section>
+<section><h2>자동 진단</h2><ul class="diagnosis">${suggestions}</ul><p class="muted">증류 provider · ${providerRows}</p></section></div>
+<h2 style="margin-top:26px">현재 처리 상태</h2>
 <section class="stats">${Object.entries(counts).map(([k, v]) => `<div><b>${v}</b><span>${STATUS_LABEL[k] || k}</span></div>`).join('')}</section>
-<p class="muted">색인 갱신 ${esc(st.built || '-')} · 완료 항목은 여기 나오지 않습니다.</p>${sec || '<p class="muted">처리할 항목이 없습니다.</p>'}`;
+<p class="muted">색인 갱신 ${esc(st.built || '-')} · 운영 지표 ${esc(m.generated_at)} · 완료 항목은 아래 목록에 나오지 않습니다.</p>${sec || '<p class="muted">처리할 항목이 없습니다.</p>'}`;
   return c.html(layout('운영', body, { active: '/ops' }));
 });
 

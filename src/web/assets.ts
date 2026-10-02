@@ -55,7 +55,7 @@ aside section{background:var(--panel);border:1px solid var(--line);border-radius
 #graph{height:260px;border-radius:8px;background:var(--bg)}#graph svg{width:100%;height:100%;display:block}
 #graph text{font-size:10px;fill:var(--sub);pointer-events:none}#graph line{stroke:var(--line);stroke-width:1.2}#graph circle{cursor:pointer;stroke:var(--panel);stroke-width:1.5}
 .inline{margin-top:18px}.pager{display:flex;gap:12px;justify-content:center;margin-top:16px}.pager a{color:var(--acc)}
-.empty{text-align:center;padding:60px 16px}.foot{margin-top:26px;font-size:12.5px}
+.tablewrap{overflow:auto}.ops-table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}.ops-table th,.ops-table td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;font-size:13px}.ops-table th:first-child,.ops-table td:first-child{text-align:left}.diagnosis{margin:0;padding-left:20px}.diagnosis li{margin:6px 0}.empty{text-align:center;padding:60px 16px}.foot{margin-top:26px;font-size:12.5px}
 `;
 
 /** 의존성 없는 작은 힘-배치 그래프 (1~2단계 이웃만) */

@@ -9,6 +9,7 @@ import { buildIndex } from './indexer.ts';
 import { verifyAll } from './verify.ts';
 import { notify } from './notify.ts';
 import { loginSession } from './capture/browser.ts';
+import { saveOpsSnapshot } from './ops.ts';
 import path from 'node:path';
 
 const [cmd, ...args] = process.argv.slice(2);
@@ -47,8 +48,10 @@ async function health() {
   const today = new Date().toISOString().slice(0, 10);
   const todays = Q.all().filter((i) => i.created_at.startsWith(today)).length;
   const problems = verifyAll();
+  const ops = saveOpsSnapshot(3);
+  const action = ops.suggestions[0] || '이상 징후 없음';
   await notify(
-    `📋 일일 상태 ${today}\n수집 ${todays}건 · 대기 ${(c.queued || 0) + (c.captured || 0) + (c.triaged || 0)} · 증류 대기 ${c.reduced || 0} · 보류 ${c.waiting || 0} · 실패 ${c.failed || 0}\n검증 문제 ${problems.length}건${problems.length ? `\n- ${problems.slice(0, 3).join('\n- ')}` : ''}`,
+    `📋 일일 상태 ${today}\n수집 ${todays}건 · 대기 ${(c.queued || 0) + (c.captured || 0) + (c.triaged || 0)} · 증류 대기 ${c.reduced || 0} · 보류 ${c.waiting || 0} · 실패 ${c.failed || 0}\n최근 3일 수집 성공률 ${ops.capture_rate}% · 부분 저장 ${ops.partial_rate}% · 원자 노트 ${ops.claims}개\n검증 문제 ${problems.length}건\n진단: ${action}`,
   );
 }
 
@@ -74,6 +77,7 @@ async function serve() {
     ['process-night', '02:00', process_],
     ['reflect', '03:30', reflect],
     ['health', '08:00', health],
+    ['ops-snapshot', '08:05', async () => { saveOpsSnapshot(3); }],
     ['retry-login', '08:10', () => capture(true)],
   ];
   const statePath = path.join(config.root, 'data', 'schedule.json');
@@ -139,6 +143,8 @@ async function main() {
       return console.log(Q.counts());
     case 'health':
       return health();
+    case 'ops':
+      return console.log(JSON.stringify(saveOpsSnapshot(Number(opt('--days') || 3)), null, 2));
     case 'retry': {
       for (const i of Q.all().filter((i) => i.status === 'failed' || (i.status === 'waiting' && flag('--waiting')))) {
         Q.save(Object.assign(i, { status: i.raw ? 'captured' : 'queued', attempts: 0, error: undefined, waiting_stage: undefined }));
@@ -157,7 +163,7 @@ async function main() {
     default:
       console.log(`사용법: npm run cli -- <명령>
   init | add <url...> [--deep] [--memo 메모] | capture [--retry] | process | reflect | run
-  index [--no-embed] | verify | status | health | retry [--waiting] | login | mcp | web | serve`);
+  index [--no-embed] | verify | status | health | ops [--days 3] | retry [--waiting] | login | mcp | web | serve`);
   }
 }
 
