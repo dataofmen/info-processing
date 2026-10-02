@@ -101,9 +101,9 @@ ops/image-map.json   이미지 대응표
 | 대체 순서(Gemini 인증 없음 → agy) | ✅ |
 | DB 삭제 → 재색인 복원 | ✅ |
 | MCP stdio·HTTP 도구 9개 | ✅ |
-| PoC ① 플랫폼 충실도(로그인 상태 X·LinkedIn·Threads) | ❌ 미검증 — 맥미니에서. Threads 테스트 URL이 다른 계정 글로 저장된 사례 있음 → 실제 글로 첫 검증 |
+| PoC ① 플랫폼 충실도 | Threads ✅ 비로그인 실제 글 추출 확인(2026-10-02, 이전 이상 사례는 존재하지 않는 테스트 URL 때문). X·LinkedIn ❌ 로그인 상태 수집 미검증 — 맥미니에서 |
 | PoC ④ 로컬 임베딩 / ⑤ 로컬 분류 일치율 | ❌ 미검증(이 노트북에 Ollama 없음) |
-| PoC ⑥ Imgur OAuth | ❌ 미검증(refresh token 필요) |
+| PoC ⑥ Imgur OAuth | ✅ 맥미니에서 연결·업로드 확인(2026-10-02, 사용자 보고). Imgur가 WebP를 받지 않아 업로드만 PNG로 변환 |
 | Codex CLI | ❌ 미설치 기기에서 테스트 |
 | assets-YYYY 연 1GB 자동 분할 | 미구현(2차) |
 
