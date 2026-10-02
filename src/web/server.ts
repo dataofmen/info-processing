@@ -195,6 +195,21 @@ app.get('/api/graph/*', (c) => {
   return c.json({ center: p, nodes: g.nodes.map((n: any) => ({ id: n.path, name: n.name, type: n.type, title: n.title })), edges: g.edges });
 });
 
+
+app.post('/ops/mcp-token/set', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const token = String(body.token || '');
+  if (!/^[a-f0-9]{48}$/.test(token)) return c.json({ ok: false, error: 'invalid token' }, 400);
+  const envPath = path.join(config.root, '.env');
+  const current = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
+  const next = /^MCP_TOKEN=.*$/m.test(current)
+    ? current.replace(/^MCP_TOKEN=.*$/m, `MCP_TOKEN=${token}`)
+    : `${current.replace(/\s*$/, '')}\nMCP_TOKEN=${token}\n`;
+  fs.writeFileSync(envPath, next, { mode: 0o600 });
+  config.mcpToken = token;
+  return c.json({ ok: true }, 200, { 'cache-control': 'no-store' });
+});
+
 app.get('/ops', (c) => {
   const items = Q.all().reverse();
   const groups = ['failed', 'waiting', 'queued', 'captured', 'triaged', 'reduced'];
@@ -230,7 +245,11 @@ app.get('/ops', (c) => {
 </section>
 <div class="cols"><section><h2>플랫폼별</h2><div class="tablewrap"><table class="ops-table"><thead><tr><th>플랫폼</th><th>입력</th><th>수집</th><th>실패</th><th>보류</th></tr></thead><tbody>${platformRows || '<tr><td colspan="5">데이터 없음</td></tr>'}</tbody></table></div></section>
 <section><h2>자동 진단</h2><ul class="diagnosis">${suggestions}</ul><p class="muted">증류 provider · ${providerRows}</p></section></div>
-<section class="mcp-panel"><h2>MCP 연결</h2><div class="mcp-grid"><div><b>상태</b><span>서비스 실행 중 · ${esc(mcpAuth)}</span></div><div><b>외부 주소</b><code>${esc(mcpPublic)}</code></div><div><b>로컬 주소</b><code>http://127.0.0.1:${config.mcpPort}/mcp</code></div><div><b>도구</b><span>${mcpTools.map(esc).join(' · ')}</span></div></div><h3>Claude Code 등록</h3><pre class="cmd"><code>${esc(claudeCmd)}</code></pre><p class="muted">토큰 값은 화면에 표시하지 않습니다. 맥미니 <code>.env</code>의 <code>MCP_TOKEN</code>을 &lt;MCP_TOKEN&gt; 자리에 직접 입력하세요.</p></section>
+<section class="mcp-panel"><h2>MCP 연결</h2><div class="mcp-grid"><div><b>상태</b><span>서비스 실행 중 · ${esc(mcpAuth)}</span></div><div><b>외부 주소</b><code>${esc(mcpPublic)}</code></div><div><b>로컬 주소</b><code>http://127.0.0.1:${config.mcpPort}/mcp</code></div><div><b>도구</b><span>${mcpTools.map(esc).join(' · ')}</span></div></div><div class="tokenbox"><div><b>MCP_TOKEN</b><span>${config.mcpToken ? '설정됨' : '설정 안 됨'}</span></div><button type="button" class="ghost" id="rotate-mcp-token">새 토큰 생성·복사</button></div><div id="new-token-box" class="new-token" hidden><b>새 토큰</b><code id="new-token-value"></code><span>클립보드에 복사됨 · 기존 토큰은 즉시 무효화됨</span></div><h3>Claude Code 등록</h3><pre class="cmd"><code>${esc(claudeCmd)}</code></pre><p class="muted">저장된 기존 토큰은 다시 표시하지 않습니다. 새 토큰은 이 브라우저에서 직접 생성한 뒤 서버에 저장하며, 생성 순간 자동으로 클립보드에 복사됩니다.</p></section><script>
+(()=>{const btn=document.getElementById('rotate-mcp-token'),box=document.getElementById('new-token-box'),val=document.getElementById('new-token-value');
+const make=()=>{const a=new Uint8Array(24);crypto.getRandomValues(a);return Array.from(a,b=>b.toString(16).padStart(2,'0')).join('')};
+if(btn)btn.onclick=async()=>{if(!confirm('새 토큰을 만들면 기존 MCP_TOKEN은 즉시 사용할 수 없게 됩니다. 계속할까요?'))return;const token=make();btn.disabled=true;btn.textContent='적용 중…';try{const r=await fetch('/ops/mcp-token/set',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token}),cache:'no-store'});if(!r.ok)throw new Error('failed');await navigator.clipboard.writeText(token);val.textContent=token;box.hidden=false;btn.textContent='새 토큰 다시 생성·복사'}catch(e){btn.textContent='적용 실패'}finally{btn.disabled=false}};
+})();</script>
 <h2 style="margin-top:26px">현재 처리 상태</h2>
 <section class="stats">${Object.entries(counts).map(([k, v]) => `<div><b>${v}</b><span>${STATUS_LABEL[k] || k}</span></div>`).join('')}</section>
 <p class="muted">색인 갱신 ${esc(st.built || '-')} · 운영 지표 ${esc(m.generated_at)} · 완료 항목은 아래 목록에 나오지 않습니다.</p>${sec || '<p class="muted">처리할 항목이 없습니다.</p>'}`;
