@@ -22,7 +22,7 @@ pipeline (이 저장소, 코드)          data/ (맥미니 로컬, git 제외)
 | `npm run cli -- index` | 색인 재생성 (`rm data/index.db` 후 실행해도 완전 복원) |
 | `npm run cli -- verify` | 스키마·출처 링크·깨진 링크·raw 불변 검사 |
 | `npm run cli -- retry [--waiting]` | 실패(와 보류) 항목 재시도 |
-| `npm run login` | 자동화 브라우저에서 X·LinkedIn·Threads 로그인 |
+| `npm run login` | 자동화 브라우저에서 X·LinkedIn 로그인 (Threads는 공개 글을 로그인 없이 받음. 필요하면 `-- --threads`) |
 | `npm run mcp` | MCP stdio 모드 (같은 기기의 에이전트용) |
 | `npm run imgur:auth [-- --check \| --test-upload]` | Imgur refresh token 발급·확인 |
 

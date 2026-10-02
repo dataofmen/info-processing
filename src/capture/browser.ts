@@ -30,10 +30,14 @@ export async function closeBrowser() {
   ctx = null;
 }
 
+// 로그인 세션을 유지하는 플랫폼: 로그인 화면으로 가면 "재로그인 필요"로 보류
 const LOGIN_WALL: Record<string, RegExp> = {
   linkedin: /linkedin\.com\/(authwall|login|checkpoint|uas\/login)/,
   x: /x\.com\/(i\/flow\/login|login)/,
-  threads: /threads\.(net|com)\/login/,
+};
+// 로그인 없이 쓰는 플랫폼: 공개 글은 그냥 보인다. 로그인 화면으로 가면 그 글만 실패 처리
+const PUBLIC_ONLY: Record<string, RegExp> = {
+  threads: /threads\.(net|com)\/(login|accounts)/,
 };
 
 async function settle(page: Page, ms = 6000) {
@@ -68,6 +72,7 @@ export async function render(url: string, platform: string): Promise<Rendered> {
     const finalUrl = page.url();
     const wall = LOGIN_WALL[platform];
     if (wall && wall.test(finalUrl)) throw new LoginRequired(platform);
+    if (PUBLIC_ONLY[platform]?.test(finalUrl)) throw new Error(`${platform}: 로그인해야 보이는 글(비공개·제한된 글일 수 있음)`);
     const status = resp?.status() || 0;
     if (status >= 400) throw new Error(`HTTP ${status} (없는 페이지이거나 접근 거부)`);
     if (platform === 'x') await page.locator('article').first().waitFor({ timeout: 12000 }).catch(() => {});
@@ -95,7 +100,9 @@ export async function download(url: string): Promise<{ buf: Buffer; type: string
 /** 사람이 직접 로그인하는 창 (npm run login) */
 export async function loginSession() {
   const c = await context(false);
-  const sites = ['https://x.com/login', 'https://www.linkedin.com/login', 'https://www.threads.net/login'];
+  // Threads는 공개 글을 로그인 없이 받으므로 기본 목록에서 뺐다(필요하면 --threads)
+  const sites = ['https://x.com/login', 'https://www.linkedin.com/login'];
+  if (process.argv.includes('--threads')) sites.push('https://www.instagram.com/accounts/login/', 'https://www.threads.com/login');
   for (const s of sites) await (await c.newPage()).goto(s).catch(() => {});
   log('열린 탭에서 로그인한 뒤, 브라우저 창을 닫으세요.');
   await new Promise<void>((res) => c.on('close', () => res()));
