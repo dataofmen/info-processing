@@ -47,8 +47,7 @@ function run(cmd: string, args: string[], stdin: string | null, timeoutMs = 6 * 
 const HEAD = '위 지시를 따르세요. 파일을 만들거나 도구를 쓰지 말고, 설명 없이 JSON 한 개만 출력하세요.';
 
 const providers: Record<string, (prompt: string) => Promise<string>> = {
-  gemini: (prompt) => run('gemini', ['--approval-mode', 'plan', '-p', HEAD], prompt),
-  agy: (prompt) => run('agy', ['--mode', 'plan', '--disable-slash-commands', '-p', `${prompt}\n\n${HEAD}`], null),
+  agy: (prompt) => run('agy', ['--disable-slash-commands', '--model', config.agy.model, '-p', `${prompt}\n\n${HEAD}`], null, config.agy.timeoutMs),
   codex: (prompt) => run('codex', ['exec', '--skip-git-repo-check', '-s', 'read-only', `${prompt}\n\n${HEAD}`], null),
   claude: (prompt) => run('claude', ['-p', '--output-format', 'text', '--disallowedTools', 'Bash,Edit,Write,WebFetch,WebSearch,Task'], `${prompt}\n\n${HEAD}`),
   ollama: async (prompt) => {
@@ -93,7 +92,7 @@ export async function ask<T>(order: string[], prompt: string, validate: (v: any)
           log(`${name} 사용량 제한 → 다음 프로바이더`);
           break;
         }
-        if (e.code === 'ENOENT' || /ECONNREFUSED|fetch failed|Auth method|not logged in|login required|종료 코드 41/i.test(e.message)) {
+        if (e.code === 'ENOENT' || /ECONNREFUSED|fetch failed|Auth method|not logged in|login required|종료 코드 41|시간 초과|timed? out/i.test(e.message)) {
           unavailable++;
           log(`${name} 사용 불가(${e.code || e.message}) → 다음`);
           break;

@@ -35,9 +35,9 @@
 | 작업 | 1순위 | 대체 |
 |---|---|---|
 | 캡처·변환·검증·색인 | 스크립트 | — |
-| 임베딩 | 로컬 Ollama(bge-m3 등) | Gemini |
-| 분류 | 로컬 LLM(PoC) | Gemini |
-| reduce | Gemini(Antigravity/Gemini CLI) | Codex → Claude |
+| 임베딩 | 로컬 Ollama(bge-m3 등) | — |
+| 분류 | 로컬 LLM(PoC) | Antigravity(agy) |
+| reduce | Antigravity(agy) | Codex → Claude |
 | reflect / reweave | Claude(증분, reweave 1회 10개 상한) | 한도 풀릴 때까지 대기 |
 
 ## 흐름
@@ -98,7 +98,7 @@ ops/image-map.json   이미지 대응표
 | 전 단계 코드(캡처·분류·reduce·reflect/reweave·verify·색인·MCP·웹 UI·봇·일정) | 작성, 노트북에서 end-to-end 1회 통과 |
 | PoC ② agy 헤드리스 | ✅ (`agy -p`, 분류·reduce 실제 수행) |
 | PoC ③ FTS5 trigram 한국어 | ✅ |
-| 대체 순서(Gemini 인증 없음 → agy) | ✅ |
+| 대체 순서(agy 기본 경로) | ✅ |
 | DB 삭제 → 재색인 복원 | ✅ |
 | MCP stdio·HTTP 도구 9개 | ✅ |
 | PoC ① 플랫폼 충실도 | Threads ✅ 비로그인 실제 글 추출 확인(2026-10-02, 이전 이상 사례는 존재하지 않는 테스트 URL 때문). X·LinkedIn ❌ 로그인 상태 수집 미검증 — 맥미니에서 |

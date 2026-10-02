@@ -36,5 +36,5 @@ cat <<'MSG'
  b. 자동화 브라우저 로그인: npm run login   (X·LinkedIn·Threads 로그인 후 창 닫기)
  c. .env 채우기:           TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_CHAT_IDS, HOST(Tailscale IP), MCP_TOKEN
  d. GitHub 비공개 저장소 연결(선택): scripts/connect-github.sh
- e. CLI 로그인 확인:       gemini / agy / codex / claude 를 한 번씩 실행해 로그인
+ e. CLI 로그인 확인:       agy / codex / claude 를 한 번씩 실행해 로그인
 MSG

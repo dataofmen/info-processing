@@ -25,9 +25,13 @@ export const config = {
   },
   gitPush: env.GIT_PUSH === '1',
   llm: {
-    triage: list(env.LLM_TRIAGE_ORDER, 'ollama,gemini,agy'),
-    reduce: list(env.LLM_REDUCE_ORDER, 'gemini,agy,codex,claude'),
+    triage: list(env.LLM_TRIAGE_ORDER, 'ollama,agy'),
+    reduce: list(env.LLM_REDUCE_ORDER, 'agy,codex,claude'),
     reflect: list(env.LLM_REFLECT_ORDER, 'claude'),
+  },
+  agy: {
+    model: env.AGY_MODEL || 'gemini-3.8-flash-low',
+    timeoutMs: Number(env.AGY_TIMEOUT_MS || 90000),
   },
   ollama: {
     url: env.OLLAMA_URL || 'http://127.0.0.1:11434',
