@@ -214,6 +214,10 @@ app.get('/ops', (c) => {
   const st = S.stats();
   const platformRows = Object.entries(m.platform).map(([p,v]) => `<tr><td>${esc(p)}</td><td>${v.total}</td><td>${v.captured}</td><td>${v.failed}</td><td>${v.waiting}</td></tr>`).join('');
   const providerRows = Object.entries(m.providers).sort((a,b)=>b[1]-a[1]).map(([p,n]) => `${esc(p)} ${n}`).join(' · ') || '-';
+  const mcpPublic = config.mcpPublicUrl || `http://${config.host}:${config.mcpPort}/mcp`;
+  const mcpAuth = config.mcpToken ? 'Bearer 토큰 설정됨' : '토큰 없음';
+  const mcpTools = ['search','get_note','get_source','list_topics','get_backlinks','list_recent','capture_url','promote','status'];
+  const claudeCmd = `claude mcp add --transport http knowledge ${mcpPublic} --header "Authorization: Bearer <MCP_TOKEN>"`;
   const suggestions = m.suggestions.map((x) => `<li>${esc(x)}</li>`).join('');
   const body = `<h1 class="h">운영</h1>
 <h2>최근 3일 운영 품질</h2>
@@ -226,6 +230,7 @@ app.get('/ops', (c) => {
 </section>
 <div class="cols"><section><h2>플랫폼별</h2><div class="tablewrap"><table class="ops-table"><thead><tr><th>플랫폼</th><th>입력</th><th>수집</th><th>실패</th><th>보류</th></tr></thead><tbody>${platformRows || '<tr><td colspan="5">데이터 없음</td></tr>'}</tbody></table></div></section>
 <section><h2>자동 진단</h2><ul class="diagnosis">${suggestions}</ul><p class="muted">증류 provider · ${providerRows}</p></section></div>
+<section class="mcp-panel"><h2>MCP 연결</h2><div class="mcp-grid"><div><b>상태</b><span>서비스 실행 중 · ${esc(mcpAuth)}</span></div><div><b>외부 주소</b><code>${esc(mcpPublic)}</code></div><div><b>로컬 주소</b><code>http://127.0.0.1:${config.mcpPort}/mcp</code></div><div><b>도구</b><span>${mcpTools.map(esc).join(' · ')}</span></div></div><h3>Claude Code 등록</h3><pre class="cmd"><code>${esc(claudeCmd)}</code></pre><p class="muted">토큰 값은 화면에 표시하지 않습니다. 맥미니 <code>.env</code>의 <code>MCP_TOKEN</code>을 &lt;MCP_TOKEN&gt; 자리에 직접 입력하세요.</p></section>
 <h2 style="margin-top:26px">현재 처리 상태</h2>
 <section class="stats">${Object.entries(counts).map(([k, v]) => `<div><b>${v}</b><span>${STATUS_LABEL[k] || k}</span></div>`).join('')}</section>
 <p class="muted">색인 갱신 ${esc(st.built || '-')} · 운영 지표 ${esc(m.generated_at)} · 완료 항목은 아래 목록에 나오지 않습니다.</p>${sec || '<p class="muted">처리할 항목이 없습니다.</p>'}`;

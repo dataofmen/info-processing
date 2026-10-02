@@ -16,6 +16,7 @@ export const config = {
   webPort: Number(env.WEB_PORT || 4321),
   mcpPort: Number(env.MCP_PORT || 4322),
   mcpToken: env.MCP_TOKEN || '',
+  mcpPublicUrl: env.MCP_PUBLIC_URL || '',
   telegramToken: env.TELEGRAM_BOT_TOKEN || '',
   telegramAllowed: list(env.TELEGRAM_ALLOWED_CHAT_IDS, ''),
   imgur: {

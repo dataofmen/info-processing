@@ -37,6 +37,9 @@ const capture = (retryWaiting = false) =>
     if (n) {
       gitCommit(config.assetsDir, `assets: ${n}건`);
       await buildIndex();
+      // 새로 수집된 항목은 같은 실행에서 즉시 triage → reduce까지 처리한다.
+      const processed = await runProcess();
+      if (processed) await buildIndex();
     }
     return n;
   });
