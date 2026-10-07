@@ -1,9 +1,8 @@
-import fs from 'node:fs';
 import path from 'node:path';
-import { config, kpath } from './config.ts';
+import { config } from './config.ts';
 import * as Q from './queue.ts';
-import { readDoc, walk, writeJson } from './util.ts';
-import { verifyAll } from './verify.ts';
+import { writeJson } from './util.ts';
+import { idx } from './query.ts';
 
 const ageMs = (days: number) => days * 24 * 60 * 60 * 1000;
 const pct = (n: number, d: number) => (d ? Math.round((n / d) * 100) : 0);
@@ -28,44 +27,26 @@ export function opsMetrics(days = 3) {
     if (i.status === 'waiting') p.waiting++;
   }
 
-  const rawFiles = walk(kpath('raw'));
-  let partial = 0;
-  let recentRaw = 0;
-  for (const f of rawFiles) {
-    try {
-      const d = readDoc(f).data || {};
-      const t = Date.parse(String(d.captured || ''));
-      if (!Number.isFinite(t) || t < since) continue;
-      recentRaw++;
-      if (d.quality === 'partial') partial++;
-    } catch {}
-  }
-
-  const sourceFiles = walk(kpath('notes/sources'));
+  // 파일을 다시 읽지 않고 파생 색인(index.db)에서 센다 — 데이터가 늘어도 화면이 느려지지 않게
+  const sinceIso = new Date(since).toISOString();
+  let partial = 0, recentRaw = 0, sources = 0, claims = 0;
   const providers: Record<string, number> = {};
-  let sources = 0;
-  for (const f of sourceFiles) {
-    try {
-      const d = readDoc(f).data || {};
-      const t = Date.parse(String(d.captured || ''));
-      if (!Number.isFinite(t) || t < since) continue;
-      sources++;
-      const p = String(d.processed_by || 'unknown');
-      providers[p] = (providers[p] || 0) + 1;
-    } catch {}
+  let problems: string[] = [];
+  try {
+    const d = idx();
+    const raw = d.prepare("SELECT count(*) n, sum(json_extract(data, '$.quality') = 'partial') p FROM docs WHERE type = 'raw' AND created >= ?").get(sinceIso) as any;
+    recentRaw = raw?.n || 0;
+    partial = raw?.p || 0;
+    for (const r of d.prepare("SELECT coalesce(json_extract(data, '$.processed_by'), 'unknown') k, count(*) n FROM docs WHERE type = 'source' AND created >= ? GROUP BY k").all(sinceIso) as any[]) {
+      providers[r.k] = r.n;
+      sources += r.n;
+    }
+    claims = (d.prepare("SELECT count(*) n FROM docs WHERE type = 'claim' AND created >= ?").get(sinceIso) as any)?.n || 0;
+    problems = JSON.parse(((d.prepare("SELECT v FROM meta WHERE k = 'verify_problems'").get() as any)?.v) || '[]');
+  } catch {
+    // 색인이 아직 없으면 0으로 보인다(다음 색인 때 채워짐)
   }
 
-  let claims = 0;
-  for (const f of walk(kpath('notes'))) {
-    if (f.includes(`${path.sep}sources${path.sep}`)) continue;
-    try {
-      const d = readDoc(f).data || {};
-      const t = Date.parse(String(d.created || ''));
-      if (d.type === 'claim' && Number.isFinite(t) && t >= since) claims++;
-    } catch {}
-  }
-
-  const problems = verifyAll();
   const captureRate = pct(captured.length, attempted.length || items.length);
   const partialRate = pct(partial, recentRaw);
 

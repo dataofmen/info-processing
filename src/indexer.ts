@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { config } from './config.ts';
 import { embed } from './llm/runners.ts';
 import { ensureDir, hash, log, readDoc, walk } from './util.ts';
-import { LINK_RE } from './verify.ts';
+import { LINK_RE, verifyAll } from './verify.ts';
 
 /**
  * index.db 는 파생물이다. 지우고 다시 만들어도 knowledge/ 만으로 100% 복원된다.
@@ -111,6 +111,8 @@ export async function buildIndex(opts: { embeddings?: boolean } = {}) {
     cache.close();
   }
   db.prepare('INSERT INTO meta VALUES (?,?)').run('built_at', new Date().toISOString());
+  // 전체 검증은 색인을 만들 때 한 번만 돌려 저장한다(운영 화면은 이 값을 읽는다)
+  db.prepare('INSERT INTO meta VALUES (?,?)').run('verify_problems', JSON.stringify(verifyAll()));
   db.close();
   fs.renameSync(tmp, config.indexDb);
   log(`색인 완료: 문서 ${files.length}, 임베딩 ${embedded}`);
