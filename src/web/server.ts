@@ -68,6 +68,32 @@ app.use('*', async (c, next) => {
   }
 });
 
+/**
+ * 쓰기 요청은 이 웹 UI 화면에서 온 것만 받는다(다른 사이트가 사용자의 브라우저로 몰래 보내는 요청 차단).
+ * 1순위: 브라우저가 붙이는 Sec-Fetch-Site. 프록시(tailscale serve)가 Host를 바꿔도 영향받지 않는다.
+ * 2순위(구형 브라우저): Origin 호스트가 Host 또는 X-Forwarded-Host와 같아야 한다.
+ * 둘 다 없으면 브라우저가 아닌 요청(curl 등)이라 이 공격과 무관하므로 통과.
+ */
+export function isSameOriginWrite(h: (name: string) => string | undefined): boolean {
+  const site = h('sec-fetch-site');
+  if (site) return site === 'same-origin';
+  const origin = h('origin');
+  if (!origin) return true;
+  let originHost: string;
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    return false;
+  }
+  return [h('host'), h('x-forwarded-host')].some((x) => !!x && x.split(',')[0].trim() === originHost);
+}
+
+app.use('*', async (c, next) => {
+  if (c.req.method === 'GET' || c.req.method === 'HEAD') return next();
+  if (!isSameOriginWrite((n) => c.req.header(n))) return c.text('forbidden: cross-site request', 403);
+  return next();
+});
+
 app.get('/assets/*', (c) => {
   const rel = decodeURIComponent(c.req.path.slice('/assets/'.length));
   const p = path.resolve(config.assetsDir, rel);
@@ -197,6 +223,8 @@ app.get('/api/graph/*', (c) => {
 
 
 app.post('/ops/mcp-token/set', async (c) => {
+  // JSON 요청만 받는다: 다른 사이트는 사전 확인(CORS) 없이 application/json을 보낼 수 없다(이중 방어)
+  if (!/^application\/json\b/i.test(c.req.header('content-type') || '')) return c.json({ ok: false, error: 'json only' }, 415);
   const body = await c.req.json().catch(() => ({}));
   const token = String(body.token || '');
   if (!/^[a-f0-9]{48}$/.test(token)) return c.json({ ok: false, error: 'invalid token' }, 400);
