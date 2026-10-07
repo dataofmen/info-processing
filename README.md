@@ -2,6 +2,12 @@
 
 텔레그램으로 URL을 보내면 맥미니가 원문을 그대로 저장하고(Defuddle = Obsidian Web Clipper 엔진), AI가 원자 노트와 주제 지도로 증류한다. 사람은 웹 UI로, AI는 MCP로 꺼내 쓴다. 설계와 결정 기록은 [PLAN.md](PLAN.md)에 있다.
 
+## 요구 사항
+- macOS 상시 실행 기기(맥미니 권장), Node.js 22.18 이상
+- 텔레그램 봇 토큰, Tailscale(원격 접근 시)
+- LLM CLI 중 하나 이상: Antigravity(agy), Codex, Claude Code, Ollama
+- 공개 웹 글·PDF 전용. 사내·비공개 정보는 넣지 않는다
+
 ## 구조
 ```
 pipeline (이 저장소, 코드)          data/ (맥미니 로컬, git 제외)
@@ -46,13 +52,13 @@ pipeline (이 저장소, 코드)          data/ (맥미니 로컬, git 제외)
 # 회사 노트북·맥미니의 Claude Code
 claude mcp add --transport http knowledge http://<맥미니-tailscale-ip>:4322/mcp --header "Authorization: Bearer <MCP_TOKEN>"
 # 맥미니 로컬(stdio)
-claude mcp add knowledge -- node /path/to/pipeline/src/cli.ts mcp
+claude mcp add knowledge -- node /path/to/info-processing/src/cli.ts mcp
 ```
 도구: `search`, `get_note`, `get_source`, `list_topics`, `get_backlinks`, `list_recent`, `capture_url`, `promote`, `status`
 
 ## 맥미니 설치
 ```bash
-git clone <pipeline 저장소> && cd pipeline
+git clone https://github.com/dataofmen/info-processing.git && cd info-processing
 ./scripts/setup-macmini.sh     # 의존성·Ollama 모델·launchd 등록
 npm run login                  # 자동화 브라우저 로그인
 vi .env                        # 텔레그램 토큰, HOST=Tailscale IP, MCP_TOKEN
@@ -82,3 +88,6 @@ vi .env                        # 텔레그램 토큰, HOST=Tailscale IP, MCP_TOK
 `/ops`에서 최근 3일 수집 성공률, 부분 저장률, 플랫폼별 실패·보류, 생성 원자 노트 수, 증류 provider, 검증 문제와 자동 개선 제안을 확인합니다. 08:00 일일 상태 알림에도 핵심 품질 지표와 우선 진단 1건이 포함됩니다.
 
 운영 화면 `/ops`에서 MCP 상태와 연결 방법, 외부/로컬 주소, Claude Code 등록 명령을 확인할 수 있습니다. 토큰 값은 화면에 노출하지 않습니다.
+
+## 라이선스
+MIT. [LICENSE](LICENSE) 참고.

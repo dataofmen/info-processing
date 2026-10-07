@@ -1,7 +1,7 @@
 {
   "name": "info_processing",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.1.0",
+  "description": "텔레그램으로 URL을 보내면 원문 저장 → AI 증류 → 주제 지도 → 웹 UI·MCP로 꺼내 쓰는 개인 지식 파이프라인",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -13,7 +13,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "@hono/node-server": "^2.1.2",
@@ -30,5 +30,9 @@
   },
   "engines": {
     "node": ">=22.18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dataofmen/info-processing.git"
   }
 }
