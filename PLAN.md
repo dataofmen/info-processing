@@ -77,7 +77,7 @@ ops/image-map.json   이미지 대응표
 |---|---|
 | 0 PoC | 플랫폼별 원문 충실도 90%↑, Antigravity 헤드리스, FTS5 trigram(✅ 2026-09-29 확인), 임베딩, 분류 일치율, Imgur OAuth |
 | 1 캡처 | 2주 연속 URL 유실 0, 자동 성공률 95%↑ |
-| 2 색인+MCP | 회사 노트북 Claude Code에서 MCP 검색, DB 삭제→재색인 복원 시연 |
+| 2 색인+MCP | 노트북 Claude Code에서 MCP 검색, DB 삭제→재색인 복원 시연 |
 | 3 분류+reduce | verify 100%, 1주 Claude 한도 미도달 |
 | 4 reflect | 주제 문장 출처 누락 0, 200건 시점 프로필 제안 |
 | 5 웹 UI | 아이폰 검색→노트→원문→이미지 막힘없음 |

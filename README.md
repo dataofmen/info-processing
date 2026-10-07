@@ -35,7 +35,7 @@ pipeline (이 저장소, 코드)          data/ (맥미니 로컬, git 제외)
 ## 일정 (맥미니 로컬 시각)
 | 시각 | 작업 | 실행 주체 |
 |---|---|---|
-| 수시 | 새 URL 수집 직후 분류·증류·노트 생성까지 즉시 처리 | 스크립트 |
+| 수시 | 새 URL 수집(스크립트) 직후 분류·증류·노트 생성까지 즉시 처리 | 수집은 스크립트, 분류·증류는 Ollama → agy → Codex → Claude |
 | 12:00 · 19:00 · 02:00 | 누락·밀린 항목 분류 + reduce 복구 배치 | Ollama → agy → Codex → Claude |
 | 03:30 | reflect + reweave (증분) | Claude (한도면 다음 날로) |
 | 08:00 | 일일 상태 + 최근 3일 품질 진단 알림 (텔레그램) | 스크립트 |
@@ -48,9 +48,15 @@ pipeline (이 저장소, 코드)          data/ (맥미니 로컬, git 제외)
 - **MCP**: `capture_url` 도구.
 
 ## MCP 연결 (Tailscale 안에서)
+서버는 `HOST=127.0.0.1`로 맥미니 안에서만 열고, 다른 기기 접근은 `tailscale serve`가 tailnet 전용 HTTPS로 중계한다.
 ```bash
-# 회사 노트북·맥미니의 Claude Code
-claude mcp add --transport http knowledge http://<맥미니-tailscale-ip>:4322/mcp --header "Authorization: Bearer <MCP_TOKEN>"
+# 맥미니: 웹 UI와 MCP를 tailnet에 연다 (이미 쓰는 HTTPS 포트와 겹치지 않게)
+tailscale serve --bg 4321                    # 웹 UI → https://<맥미니>.<tailnet>.ts.net/
+tailscale serve --bg --https=9446 4322       # MCP   → https://<맥미니>.<tailnet>.ts.net:9446/mcp
+# .env 의 MCP_PUBLIC_URL 에 위 MCP 주소를 적으면 운영 화면(/ops)에 등록 명령이 표시된다
+
+# 다른 기기(노트북 등)의 Claude Code
+claude mcp add --transport http knowledge https://<맥미니>.<tailnet>.ts.net:9446/mcp --header "Authorization: Bearer <MCP_TOKEN>"
 # 맥미니 로컬(stdio)
 claude mcp add knowledge -- node /path/to/info-processing/src/cli.ts mcp
 ```
@@ -61,7 +67,7 @@ claude mcp add knowledge -- node /path/to/info-processing/src/cli.ts mcp
 git clone https://github.com/dataofmen/info-processing.git && cd info-processing
 ./scripts/setup-macmini.sh     # 의존성·Ollama 모델·launchd 등록
 npm run login                  # 자동화 브라우저 로그인
-vi .env                        # 텔레그램 토큰, HOST=Tailscale IP, MCP_TOKEN
+vi .env                        # 텔레그램 토큰·허용 chat ID, MCP_TOKEN, MCP_PUBLIC_URL (HOST는 127.0.0.1 유지)
 ./scripts/connect-github.sh    # (선택) knowledge·assets 비공개 저장소 생성·연결
 ```
 비밀값(텔레그램 토큰, Imgur, MCP 토큰)은 `.env`에만 둔다. `.env`는 git에 올라가지 않는다.
