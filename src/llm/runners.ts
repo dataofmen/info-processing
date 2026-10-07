@@ -47,7 +47,8 @@ function run(cmd: string, args: string[], stdin: string | null, timeoutMs = 6 * 
 const HEAD = '위 지시를 따르세요. 파일을 만들거나 도구를 쓰지 말고, 설명 없이 JSON 한 개만 출력하세요.';
 
 const providers: Record<string, (prompt: string) => Promise<string>> = {
-  agy: (prompt) => run('agy', ['--disable-slash-commands', '--model', config.agy.model, '-p', `${prompt}\n\n${HEAD}`], null, config.agy.timeoutMs),
+  // --sandbox: 터미널 제한(이중 방어). --mode plan 은 --disable-slash-commands 와 함께면 효과가 없어 쓰지 않는다(2026-10-07 확인)
+  agy: (prompt) => run('agy', ['--sandbox', '--disable-slash-commands', '--model', config.agy.model, '-p', `${prompt}\n\n${HEAD}`], null, config.agy.timeoutMs),
   codex: (prompt) => run('codex', ['exec', '--skip-git-repo-check', '-s', 'read-only', `${prompt}\n\n${HEAD}`], null),
   claude: (prompt) => run('claude', ['-p', '--output-format', 'text', '--disallowedTools', 'Bash,Edit,Write,WebFetch,WebSearch,Task'], `${prompt}\n\n${HEAD}`),
   ollama: async (prompt) => {
