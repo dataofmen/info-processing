@@ -28,6 +28,7 @@
 | D13 | 웹 UI = 읽기 전용 자체 앱(노트·역링크·로컬 그래프·MOC·검색·운영 화면). 언제든 Quartz로 교체 가능 | 단일 작성자 원칙, 의미 검색·운영 화면 필요 |
 | D14 | MCP 1차부터. 쓰기 도구는 `ops/` 대기열에만 넣는다. 접근은 Tailscale 전용 | 확장성, 두 번째 작성자 방지 |
 | D15 | 텔레그램 질의응답은 2차 | 봇 단순화 |
+| D14a | (2026-10-13) MCP 접근을 ChatGPT 한 곳에 한해 넓힌다: OpenAI Secure MCP Tunnel이 맥미니에서 MCP를 stdio로 띄워 중계. 공개 포트 없음, 이 경로는 토큰 없음(기기 내부 연결) | ChatGPT는 tailnet에 접근 불가·Bearer 토큰 미지원. 데이터는 공개 웹 글이라 D1 경계 안 |
 | D16 | 노트·주제는 한국어, 원문·인용은 원어, 용어집 `self/glossary.md` | 표기 일관성 |
 | D17 | 언어 TypeScript 하나(Node ≥22.13, 타입 스트리핑), `pipeline` 저장소는 `knowledge`와 분리 | Defuddle·Playwright·MCP SDK 모두 TS |
 

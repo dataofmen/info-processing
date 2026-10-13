@@ -62,6 +62,14 @@ claude mcp add knowledge -- node /path/to/info-processing/src/cli.ts mcp
 ```
 도구: `search`, `get_note`, `get_source`, `list_topics`, `get_backlinks`, `list_recent`, `capture_url`, `promote`, `status`
 
+## ChatGPT 연결 (OpenAI Secure MCP Tunnel)
+ChatGPT 서버는 tailnet 주소에 접근할 수 없고, 고정 토큰(Bearer) 인증도 보내지 못한다(OAuth 또는 인증 없음만 지원). 그래서 OpenAI의 `tunnel-client`가 맥미니에서 MCP를 **로컬 연결(stdio)**로 직접 띄우고, OpenAI 쪽으로 나가는 연결로만 중계한다. 인터넷에 포트를 열지 않는다.
+1. https://platform.openai.com/settings/organization/tunnels 에서 터널을 만들고 ChatGPT 워크스페이스와 연결한다. 실행용 API 키(Tunnels Read·Use)를 발급한다.
+2. 맥미니 터미널: `./scripts/setup-chatgpt-tunnel.sh <tunnel_id>` — 설치, 키 저장(입력값 숨김, 파일 권한 600), 설정 검사, 상주 실행 등록.
+3. https://chatgpt.com/plugins → + → Add custom MCP server → Connection: **Tunnel** → 인증 **No authentication**.
+
+검색·조회 도구 7개는 읽기 전용으로 표시되어 확인 없이 호출되고, `capture_url`·`promote`는 쓰기 도구라 호출할 때 ChatGPT가 확인을 묻는다. 쓰기 도구도 대기열에 넣기만 한다.
+
 ## 맥미니 설치
 ```bash
 git clone https://github.com/dataofmen/info-processing.git && cd info-processing
