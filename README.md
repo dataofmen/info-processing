@@ -70,6 +70,12 @@ ChatGPT 서버는 tailnet 주소에 접근할 수 없고, 고정 토큰(Bearer) 
 
 검색·조회 도구 7개는 읽기 전용으로 표시되어 확인 없이 호출되고, `capture_url`·`promote`는 쓰기 도구라 호출할 때 ChatGPT가 확인을 묻는다. 쓰기 도구도 대기열에 넣기만 한다.
 
+## Knowledge-first 활용 정책
+
+중요한 기획·연구·분석에서는 `knowledge` MCP 검색을 우선 검토하고, 검색된 지식의 원문·주장을 최신 웹 근거와 대조한다. 정책은 사업·투자·가족 교육·커리어·콘텐츠 등 모든 주제에 적용되며 단순 질문은 검색을 생략할 수 있다. 상세 트리거·검증·보안 경계: [docs/knowledge-use-policy.md](docs/knowledge-use-policy.md).
+
+**주의:** 저장소의 `AGENTS.md`는 저장소를 사용하는 에이전트에게 적용되는 규칙이며 ChatGPT 전체 대화에 적용되는 전역 자동 검색 설정은 아니다.
+
 ## 맥미니 설치
 ```bash
 git clone https://github.com/dataofmen/info-processing.git && cd info-processing
