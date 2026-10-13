@@ -111,3 +111,11 @@ vi .env                        # 텔레그램 토큰·허용 chat ID, MCP_TOKEN,
 
 ## 라이선스
 MIT. [LICENSE](LICENSE) 참고.
+
+## ChatGPT 대화 지식 양방향 적재 (review 정책)
+- \`propose_conversation_knowledge\`: 대화의 결정·인사이트·실험·노하우를 구조화해 로컬 후보 대기열에 저장. 호출자가 명시적으로 전달한 내용만 처리한다.
+- \`list_knowledge_candidates\`, \`get_knowledge_candidate\`: 사용자 검토용 조회.
+- \`review_knowledge_candidate\`: 승인 또는 거절. 승인 시 \`notes/conversations/\`에 추적 가능한 Markdown 생성.
+- 저장 후보는 제목·본문 기반 정확 중복 검사와 유사 제목 후보 탐색을 수행한다. 의미상 모순 판정은 자동 확정하지 않으며 인간 검토 대상이다.
+- 승인 후 검색 반영은 \`npm run cli -- index\` 실행이 필요하다. 자동으로 대화 전체를 읽거나 종료를 감지하는 기능은 제공하지 않는다.
+- 공개 자료가 아닌 사용자 대화 내용에는 민감 정보가 포함될 수 있으므로, 반드시 비식별화 후 사용자가 저장 여부를 결정한다.

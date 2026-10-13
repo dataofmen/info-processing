@@ -1,0 +1,24 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'knowledge-conv-test-'));
+process.env.KNOWLEDGE_DIR=path.join(root,'knowledge');
+process.env.INDEX_DB=path.join(root,'missing.db');
+process.env.CONVERSATION_CANDIDATE_DIR=path.join(root,'candidates');
+const {propose,review,getCandidate,listCandidates}=await import('../src/conversation-knowledge.ts');
+test('approve lifecycle, provenance, duplicate detection, reject',async()=>{
+ const input={kind:'decision',project:'pilot',title:'테스트 승인 결정',content:'기존 접근을 유지하고 후보는 승인받은 경우만 저장한다.',evidence:['https://example.com/source'],conversation_ref:'conversation:test'};
+ const first=await propose(input);assert.equal(first.status,'pending_review');
+ const again=await propose(input);assert.equal(again.status,'duplicate');assert.equal(again.id,first.id);
+ assert.equal(fs.existsSync(path.join(process.env.KNOWLEDGE_DIR,'notes','conversations')),false);
+ assert.equal(getCandidate(first.id).status,'pending');
+ const ok=review(first.id,'approve');assert.equal(ok.status,'approved');assert.equal(ok.index_refresh_required,true);
+ const body=fs.readFileSync(path.join(process.env.KNOWLEDGE_DIR,ok.note_path),'utf8');
+ assert.match(body,/conversation:test/);assert.match(body,/example.com/);assert.equal(review(first.id,'approve').status,'approved');
+ const second=await propose({...input,title:'다른 판단',content:'이 항목은 실제 승인 없이 거절 상태로 전환되는지 확인한다.'});
+ const no=review(second.id,'reject');assert.equal(no.status,'rejected');
+ assert.equal(listCandidates('pending').length,0);
+ assert.throws(()=>getCandidate('../../.env'));
+});

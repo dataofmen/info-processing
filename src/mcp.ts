@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { config } from './config.ts';
 import * as Q from './queue.ts';
 import * as S from './query.ts';
+import * as C from './conversation-knowledge.ts';
 import { log } from './util.ts';
 
 const text = (v: unknown) => ({ content: [{ type: 'text' as const, text: typeof v === 'string' ? v : JSON.stringify(v, null, 2) }] });
@@ -88,6 +89,31 @@ export function buildServer() {
       return text(`깊게로 올림: ${id} (다음 처리 때 증류)`);
     },
   );
+
+  // 사용자 검토 전에는 정본으로 게시하지 않음. 대화 내용은 호출자가 명시적으로 전달한 것만 접수한다.
+  s.registerTool('propose_conversation_knowledge', {
+    annotations: WRITE, description: '대화에서 발견한 지식/결정/노하우를 검토 후보로 저장 (자동 승인 없음). 민감 정보는 제출하지 말 것.',
+    inputSchema: {
+      kind: z.enum(['insight','decision','playbook','experiment','outcome','open_issue']),
+      project: z.string().min(1), title: z.string().min(5), content: z.string().min(15),
+      evidence: z.array(z.string()).max(20).optional(), conversation_ref: z.string().max(500).optional(),
+    },
+  }, async (input) => text(await C.propose(input)));
+
+  s.registerTool('list_knowledge_candidates', {
+    annotations: READ, description: '대화 지식 저장 후보 목록과 승인 상태 확인',
+    inputSchema: { status: z.enum(['pending','approved','rejected']).optional() },
+  }, async ({status}) => text(C.listCandidates(status)));
+
+  s.registerTool('get_knowledge_candidate', {
+    annotations: READ, description: '승인 전 대화 지식 후보 내용 검토',
+    inputSchema: { id: z.string() },
+  }, async ({id}) => text(C.getCandidate(id)));
+
+  s.registerTool('review_knowledge_candidate', {
+    annotations: WRITE, description: '사용자가 검토한 후보만 명시적 승인/거절. 승인 시 Markdown 정본 생성; 색인 재생성은 별도 필요',
+    inputSchema: { id: z.string(), decision: z.enum(['approve','reject']) },
+  }, async ({id,decision}) => text(C.review(id,decision)));
 
   s.registerTool('status', { annotations: READ, description: '파이프라인 상태(대기열·색인)', inputSchema: {} }, async () => text({ queue: Q.counts(), index: S.stats() }));
 
