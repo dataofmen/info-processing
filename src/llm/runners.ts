@@ -47,17 +47,44 @@ function run(cmd: string, args: string[], stdin: string | null, timeoutMs = 6 * 
 
 const HEAD = '위 지시를 따르세요. 파일을 만들거나 도구를 쓰지 말고, 설명 없이 JSON 한 개만 출력하세요.';
 
-const providers: Record<string, (prompt: string) => Promise<string>> = {
+export type ProviderCall = { command: string; argv: string[]; stdin: string | null; timeoutMs?: number };
+
+/** 프로바이더 CLI에 넘기는 인자. agy 의 금지 조합은 CliInvocation 이 거절한다. */
+export function providerInvocation(name: string, prompt: string): ProviderCall {
+  const full = `${prompt}\n\n${HEAD}`;
   // --sandbox: 터미널 제한(이중 방어). --mode plan 은 --disable-slash-commands 와 함께면 효과가 없어 CliInvocation이 거절한다(2026-10-07 확인, e5da1d4).
-  agy: (prompt) =>
-    run(
-      agyCli.name,
-      new CliInvocation(agyCli, ['--sandbox', '--disable-slash-commands', '--model', config.agy.model, '-p', `${prompt}\n\n${HEAD}`]).argv,
-      null,
-      config.agy.timeoutMs,
-    ),
-  codex: (prompt) => run('codex', ['exec', '--skip-git-repo-check', '-s', 'read-only', `${prompt}\n\n${HEAD}`], null),
-  claude: (prompt) => run('claude', ['-p', '--output-format', 'text', '--disallowedTools', 'Bash,Edit,Write,WebFetch,WebSearch,Task'], `${prompt}\n\n${HEAD}`),
+  if (name === 'agy') {
+    return {
+      command: agyCli.name,
+      argv: new CliInvocation(agyCli, ['--sandbox', '--disable-slash-commands', '--model', config.agy.model, '-p', full]).argv,
+      stdin: null,
+      timeoutMs: config.agy.timeoutMs,
+    };
+  }
+  if (name === 'codex') return { command: 'codex', argv: ['exec', '--skip-git-repo-check', '-s', 'read-only', full], stdin: null };
+  if (name === 'claude') {
+    return {
+      command: 'claude',
+      argv: ['-p', '--output-format', 'text', '--disallowedTools', 'Bash,Edit,Write,WebFetch,WebSearch,Task'],
+      stdin: full,
+    };
+  }
+  throw new Error(`unknown provider ${name}`);
+}
+
+const providers: Record<string, (prompt: string) => Promise<string>> = {
+  agy: (prompt) => {
+    const call = providerInvocation('agy', prompt);
+    return run(call.command, call.argv, call.stdin, call.timeoutMs);
+  },
+  codex: (prompt) => {
+    const call = providerInvocation('codex', prompt);
+    return run(call.command, call.argv, call.stdin);
+  },
+  claude: (prompt) => {
+    const call = providerInvocation('claude', prompt);
+    return run(call.command, call.argv, call.stdin);
+  },
   ollama: async (prompt) => {
     const r = await fetch(`${config.ollama.url}/api/chat`, {
       method: 'POST',

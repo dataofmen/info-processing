@@ -54,40 +54,47 @@ async function extract(item: Q.Item): Promise<Extracted & { pdf?: string; source
   return await fromHtml(r.html, r.finalUrl);
 }
 
+/** extract 가 끝난 원문을 raw 로 쓰고 대기열을 captured 로 바꾼다. */
+export async function commitCapture(item: Q.Item, x: Extracted & { pdf?: string; source?: string }) {
+  const quality = x.wordCount < 15 && !/!\[/.test(x.markdown) ? 'partial' : 'complete';
+  const { markdown, images } = await storeImages(item.id, x.markdown, x.title);
+  const rel = path.join('raw', item.id.slice(0, 4), item.id.slice(4, 6), `${item.id}.raw.md`);
+  const data = {
+    type: 'raw',
+    id: item.id,
+    title: x.title,
+    source: x.source || item.url,
+    platform: item.platform,
+    author: x.author,
+    published: x.published,
+    captured: now(),
+    site: x.site,
+    description: x.description,
+    language: x.language,
+    word_count: x.wordCount,
+    extractor: x.extractor,
+    extract_log: x.extract_log,
+    doi: x.doi,
+    quality,
+    images: images.length ? images : undefined,
+    pdf: x.pdf,
+    memo: item.memo,
+  };
+  const trimmed = markdown.trim();
+  const alreadyTitled = trimmed === `# ${x.title}` || trimmed.startsWith(`# ${x.title}\n`);
+  writeFile(kpath(rel), stringifyDoc(data, alreadyTitled ? trimmed : `# ${x.title}\n\n${trimmed}`));
+  gitCommit(config.knowledgeDir, `capture: ${item.id} ${x.title.slice(0, 60)}`);
+  Object.assign(item, { status: 'captured', raw: rel, title: x.title, error: undefined });
+  Q.save(item);
+  const warn = quality === 'partial' ? '\n⚠️ 본문이 짧습니다(부분 저장). 필요하면 Web Clipper 파일로 다시 보내 주세요.' : '';
+  await notify(`저장됨: ${x.title.slice(0, 80)}\n${item.platform} · 이미지 ${images.length} · ${x.extractor}${warn}`, item.chat_id);
+}
+
 export async function captureOne(item: Q.Item): Promise<boolean> {
   item.attempts++;
   try {
     const x = await extract(item);
-    const quality = x.wordCount < 15 && !/!\[/.test(x.markdown) ? 'partial' : 'complete';
-    const { markdown, images } = await storeImages(item.id, x.markdown, x.title);
-    const rel = path.join('raw', item.id.slice(0, 4), item.id.slice(4, 6), `${item.id}.raw.md`);
-    const data = {
-      type: 'raw',
-      id: item.id,
-      title: x.title,
-      source: x.source || item.url,
-      platform: item.platform,
-      author: x.author,
-      published: x.published,
-      captured: now(),
-      site: x.site,
-      description: x.description,
-      language: x.language,
-      word_count: x.wordCount,
-      extractor: x.extractor,
-      extract_log: x.extract_log,
-      doi: x.doi,
-      quality,
-      images: images.length ? images : undefined,
-      pdf: x.pdf,
-      memo: item.memo,
-    };
-    writeFile(kpath(rel), stringifyDoc(data, `# ${x.title}\n\n${markdown}`));
-    gitCommit(config.knowledgeDir, `capture: ${item.id} ${x.title.slice(0, 60)}`);
-    Object.assign(item, { status: 'captured', raw: rel, title: x.title, error: undefined });
-    Q.save(item);
-    const warn = quality === 'partial' ? '\n⚠️ 본문이 짧습니다(부분 저장). 필요하면 Web Clipper 파일로 다시 보내 주세요.' : '';
-    await notify(`저장됨: ${x.title.slice(0, 80)}\n${item.platform} · 이미지 ${images.length} · ${x.extractor}${warn}`, item.chat_id);
+    await commitCapture(item, x);
     return true;
   } catch (e: any) {
     if (e instanceof LoginRequired) {

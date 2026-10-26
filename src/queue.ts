@@ -35,7 +35,7 @@ export function all(): Item[] {
     .filter((f) => f.endsWith('.json'))
     .map((f) => readJson<Item | null>(path.join(config.queueDir, f), null))
     .filter((x): x is Item => !!x)
-    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    .sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
 export const get = (id: string) => readJson<Item | null>(file(id), null);
@@ -91,4 +91,30 @@ export function counts() {
   const c: Record<string, number> = {};
   for (const i of all()) c[i.status] = (c[i.status] || 0) + 1;
   return c;
+}
+
+/**
+ * 깊게로 올린다.
+ * 원문이 있으면 증류 대기(triaged). 원문이 없으면 수집 대기(queued)를 유지한다.
+ * 로그인 보류(waiting, 아직 원문 없음)는 보류 그대로 두고 깊은 표시만 한다.
+ */
+export function promote(id: string): Item | null {
+  const it = get(id);
+  if (!it) return null;
+  it.force_deep = true;
+  it.tier = 'deep';
+  if (!it.raw) {
+    const waitingForCapture = it.status === 'waiting' && it.waiting_stage === 'queued';
+    if (it.status !== 'queued' && !waitingForCapture) {
+      it.status = 'queued';
+      it.attempts = 0;
+      it.waiting_stage = undefined;
+      it.error = undefined;
+    }
+  } else {
+    it.status = 'triaged';
+    it.waiting_stage = undefined;
+    it.error = undefined;
+  }
+  return save(it);
 }
