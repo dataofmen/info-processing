@@ -4,7 +4,7 @@
   "description": "텔레그램으로 URL을 보내면 원문 저장 → AI 증류 → 주제 지도 → 웹 UI·MCP로 꺼내 쓰는 개인 지식 파이프라인",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test tests/*.test.mjs",
     "cli": "node --env-file-if-exists=.env src/cli.ts",
     "serve": "node --env-file-if-exists=.env src/cli.ts serve",
     "login": "node --env-file-if-exists=.env src/cli.ts login",
