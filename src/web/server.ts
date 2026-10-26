@@ -136,8 +136,7 @@ app.post('/capture', async (c) => {
 });
 
 app.post('/promote/:id', (c) => {
-  const it = Q.get(c.req.param('id'));
-  if (it) Q.save(Object.assign(it, { tier: 'deep', force_deep: true, status: 'triaged' }));
+  Q.promote(c.req.param('id'));
   return c.redirect(`/n/${enc(c.req.param('id'))}`);
 });
 

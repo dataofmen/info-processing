@@ -20,12 +20,17 @@ export function normalizeUrl(input: string): string {
   return u.toString();
 }
 
+function hostIs(hostname: string, domain: string): boolean {
+  return hostname === domain || hostname.endsWith(`.${domain}`);
+}
+
 export function platformOf(url: string): string {
-  const h = new URL(url).hostname;
-  if (/(^|\.)x\.com$|twitter\.com$/.test(h)) return 'x';
-  if (/linkedin\.com$/.test(h)) return 'linkedin';
-  if (/threads\.(net|com)$/.test(h)) return 'threads';
-  if (/\.pdf$/i.test(new URL(url).pathname)) return 'pdf';
+  const u = new URL(url);
+  const h = u.hostname;
+  if (hostIs(h, 'x.com') || hostIs(h, 'twitter.com')) return 'x';
+  if (hostIs(h, 'linkedin.com')) return 'linkedin';
+  if (hostIs(h, 'threads.net') || hostIs(h, 'threads.com')) return 'threads';
+  if (/\.pdf$/i.test(u.pathname)) return 'pdf';
   return 'web';
 }
 
@@ -98,7 +103,7 @@ export function walk(dir: string, ext = '.md'): string[] {
     if (e.isDirectory()) out.push(...walk(p, ext));
     else if (e.name.endsWith(ext)) out.push(p);
   }
-  return out;
+  return out.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
 /** 파이프라인 전역 잠금. 한 번에 하나만 쓴다. */

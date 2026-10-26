@@ -83,10 +83,10 @@ export function buildServer() {
     'promote',
     { annotations: WRITE, description: '보관만/가볍게 등급의 출처를 깊게로 올려 다시 증류', inputSchema: { id: z.string() } },
     async ({ id }) => {
-      const it = Q.get(id);
+      const it = Q.promote(id);
       if (!it) return text(`없음: ${id}`);
-      Q.save(Object.assign(it, { tier: 'deep', force_deep: true, status: 'triaged' }));
-      return text(`깊게로 올림: ${id} (다음 처리 때 증류)`);
+      const when = it.raw ? '다음 처리 때 증류' : '원문 수집 후 증류';
+      return text(`깊게로 올림: ${id} (${when})`);
     },
   );
 

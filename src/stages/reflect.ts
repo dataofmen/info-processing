@@ -61,7 +61,8 @@ function renderTopic(title: string, overview: string, notes: string[], refs: str
 const linkName = (line: string) => line.match(/\[\[([^\]|#]+)/)?.[1];
 
 function stripBadLinks(text: string, valid: Set<string>) {
-  return text.replace(/\[\[([^\]|#]+)(?:\|([^\]]*))?\]\]/g, (all, n, alias) => (valid.has(n.trim()) ? all : alias || n));
+  // verify.ts LINK_RE 와 같이 #앵커를 인식한다. 못 알아보면 깨진 링크로 reflect 전체가 되돌려진다.
+  return text.replace(/\[\[([^\]|#]+)(#[^\]|]*)?(?:\|([^\]]*))?\]\]/g, (all, n, _hash, alias) => (valid.has(String(n).trim()) ? all : alias || String(n)));
 }
 
 export async function runReflect() {
@@ -162,6 +163,14 @@ export async function runReflect() {
     n.data.topics = [...new Set([...(n.data.topics || []), ...(assigned.get(n.name) || [])])];
     if (!n.data.topics.length) delete n.data.topics;
     touched.add(n.name);
+    // 깊게 등급의 출처 노트는 원자 노트가 reflect 대상이라 여기서 빠진다. 증류가 끝났으면 출처도 표시한다.
+    if (n.data.type !== 'claim') continue;
+    for (const id of n.data.sources || []) {
+      const src = sources.find((s) => s.name === id);
+      if (!src) continue;
+      src.data.reflected = true;
+      touched.add(src.name);
+    }
   }
   const noteLike = new Map([...allNotes, ...sources].map((n) => [n.name, n]));
   for (const name of touched) {
