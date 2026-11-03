@@ -100,7 +100,7 @@ export async function ask<T>(order: string[], prompt: string, validate: (v: any)
           log(`${name} 사용량 제한 → 다음 프로바이더`);
           break;
         }
-        if (e.code === 'ENOENT' || /ECONNREFUSED|fetch failed|Auth method|not logged in|login required|종료 코드 41|시간 초과|timed? out/i.test(e.message)) {
+        if (e.code === 'ENOENT' || /ECONNREFUSED|fetch failed|Auth method|not logged in|login required|종료 코드 41|시간 초과|timed? out|failed to authenticate|session expired|please (log ?in|run .*login)/i.test(e.message)) {
           unavailable++;
           log(`${name} 사용 불가(${e.code || e.message}) → 다음`);
           break;

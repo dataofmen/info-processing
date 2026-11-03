@@ -3,7 +3,7 @@ import path from 'node:path';
 import { config, kpath } from '../config.ts';
 import * as Q from '../queue.ts';
 import { LimitError, ask } from '../llm/runners.ts';
-import { gitCommit, gitRevert, log, now, readDoc, slugify, stringifyDoc, walk, writeFile } from '../util.ts';
+import { gitCommit, gitRevert, wikiAlias, log, now, readDoc, slugify, stringifyDoc, walk, writeFile } from '../util.ts';
 import { verifyAll } from '../verify.ts';
 
 type Note = { name: string; rel: string; data: any; body: string };
@@ -110,7 +110,7 @@ export async function runReflect() {
     for (const s of refs) {
       if (have.has(s.source)) continue;
       const title = sources.find((x) => x.name === s.source)?.data.title || s.source;
-      refLines.push(`- [[${s.source}|${String(title).slice(0, 60)}]] — ${s.line}`);
+      refLines.push(`- [[${s.source}|${wikiAlias(title)}]] — ${s.line}`);
       have.add(s.source);
     }
     for (const n of notes) assigned.set(n.note, [...(assigned.get(n.note) || []), name]);

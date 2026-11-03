@@ -3,7 +3,7 @@ import path from 'node:path';
 import { config, kpath } from '../config.ts';
 import * as Q from '../queue.ts';
 import { LimitError, ask } from '../llm/runners.ts';
-import { gitCommit, gitRevert, log, now, readDoc, slugify, stringifyDoc, writeFile } from '../util.ts';
+import { gitCommit, gitRevert, wikiAlias, log, now, readDoc, slugify, stringifyDoc, writeFile } from '../util.ts';
 import { verifyAll } from '../verify.ts';
 
 function selfFile(name: string) {
@@ -129,7 +129,7 @@ function writeReduced(item: Q.Item, raw: { data: any }, r: Reduced, provider: st
       file,
       stringifyDoc(
         { type: 'claim', title: c.title, sources: [item.id], tags: r.tags, created: now(), processed_by: provider, reflected: false, verify: isPdf && c.verify_numbers ? '수치 원문 대조 필요' : undefined },
-        `# ${c.title}\n\n${isPdf && c.verify_numbers ? '> ⚠️ 수치·표 값은 PDF 추출본 기준입니다. 인용 전 원본 PDF와 대조하세요.\n\n' : ''}${c.body.trim()}\n\n---\n출처: [[${item.id}|${title.slice(0, 60)}]]`,
+        `# ${c.title}\n\n${isPdf && c.verify_numbers ? '> ⚠️ 수치·표 값은 PDF 추출본 기준입니다. 인용 전 원본 PDF와 대조하세요.\n\n' : ''}${c.body.trim()}\n\n---\n출처: [[${item.id}|${wikiAlias(title)}]]`,
       ),
     );
   }

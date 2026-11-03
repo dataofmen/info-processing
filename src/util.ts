@@ -47,6 +47,10 @@ export function slugify(s: string, max = 60): string {
     .replace(/[ .]+$/, '');
 }
 
+/** 위키링크 표시 이름: ] 가 들어가면 링크가 일찍 끝나 깨지므로 [ ] | 와 줄바꿈을 뺀다 */
+export const wikiAlias = (s: unknown, max = 60) =>
+  String(s ?? '').replace(/[\[\]|]/g, '').replace(/\s+/g, ' ').trim().slice(0, max);
+
 export function ensureDir(p: string) {
   fs.mkdirSync(p, { recursive: true });
 }
